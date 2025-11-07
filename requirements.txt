@@ -1,0 +1,15 @@
+# Core dependencies
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# For training (Pixel Transformer)
+torch>=2.0.0
+
+# For data generation (Phase 1 OCR)
+datasets>=2.14.0  # HuggingFace datasets (for Wikipedia)
+
+# Optional: OCR validation
+pytesseract>=0.3.10  # Requires system package: tesseract-ocr
+
+# Development
+pytest>=7.4.0

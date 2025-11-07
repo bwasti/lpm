@@ -6,6 +6,18 @@ A transformer architecture that operates on sequences of 200×200 pixel images a
 
 This model treats each entire 200×200 image as a single token (40,000 dimensions). This is different from traditional vision transformers which use small patches (e.g., 16×16).
 
+## Installation
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# For OCR validation (optional)
+sudo dnf install tesseract  # Fedora/RHEL
+# or: sudo apt-get install tesseract-ocr  # Ubuntu/Debian
+# or: brew install tesseract  # Mac
+```
+
 ## Quick Start
 
 ```bash
@@ -22,7 +34,13 @@ python model.py
 lpm/
 ├── model.py              # Pixel Transformer implementation
 ├── train.py              # Training script with synthetic data
+├── phase1_ocr/           # OCR training data generation
+│   ├── generate_training_data.py  # Data generation script
+│   ├── render.py         # Text rendering utilities
+│   ├── visualize.py      # Interactive visualization
+│   └── README.md         # Phase 1 documentation
 ├── tests/                # Test files for components
+├── requirements.txt      # Python dependencies
 ├── README.md             # This file
 ├── MISSING.md            # Feature status and bug documentation
 └── TEST_RESULTS.md       # Testing results
@@ -141,7 +159,33 @@ See `TEST_RESULTS.md` for detailed test results.
 
 - Python 3.8+
 - `gt` framework (https://github.com/bwasti/gt)
-- NumPy
+- NumPy, Pillow, PyTorch (see requirements.txt)
+- Optional: pytesseract + tesseract-ocr (for OCR validation)
+
+## Phase 1: OCR Training Data
+
+Generate training data for text normalization:
+
+```bash
+cd phase1_ocr
+
+# Generate training data (with validation)
+python generate_training_data.py --generate --local \
+    --renderings 10 --batch-size 1000 --validate
+
+# Visualize examples
+python visualize.py "Hello World" --validate
+```
+
+See `phase1_ocr/README.md` for detailed documentation.
+
+**Features:**
+- Downloads text from Wikipedia or uses local samples
+- Renders text with variations (fonts, rotation, blur, noise, sizes, alignments)
+- Auto-sizes text to fit in 200×200 box
+- OCR validation to ensure text is recoverable
+- Compressed binary format (~600 bytes per image, 90% compression)
+- Multiple renderings per text for data augmentation
 
 ## License
 
