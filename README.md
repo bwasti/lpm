@@ -4,16 +4,7 @@ A transformer architecture that operates on sequences of 200×200 pixel images a
 
 ## Overview
 
-Unlike traditional transformers that work on text tokens or small image patches, this model treats each **entire 200×200 image as a single token**. This creates a 40,000-dimensional token (200 × 200 pixels).
-
-## Features
-
-- ✅ **Full transformer architecture** with multi-head attention
-- ✅ **LayerNorm** with learnable parameters
-- ✅ **Positional encodings** (fixed)
-- ✅ **Multi-GPU training** with automatic sharding (GT_AUTO_SHARD=1)
-- ✅ **Complete autograd** support for all operations
-- ✅ **PyTorch-like API** using the `gt` framework
+This model treats each entire 200×200 image as a single token (40,000 dimensions). This is different from traditional vision transformers which use small patches (e.g., 16×16).
 
 ## Quick Start
 
@@ -32,9 +23,6 @@ lpm/
 ├── model.py              # Pixel Transformer implementation
 ├── train.py              # Training script with synthetic data
 ├── tests/                # Test files for components
-│   ├── test_components.py
-│   ├── test_minimal.py
-│   └── ...
 ├── README.md             # This file
 ├── MISSING.md            # Feature status and bug documentation
 └── TEST_RESULTS.md       # Testing results
@@ -44,22 +32,15 @@ lpm/
 
 ### Model Pipeline
 
-1. **Input**: Sequence of 200×200 pixel images
-   - Shape: `(batch, seq_len, 200, 200)`
-
-2. **Pixel Embedding**: Linear projection
-   - `40,000 dims → embed_dim` (e.g., 256)
-
+1. **Input**: Sequence of 200×200 pixel images `(batch, seq_len, 200, 200)`
+2. **Pixel Embedding**: Linear projection from 40,000 dims to `embed_dim`
 3. **Positional Encoding**: Fixed positional embeddings
-
 4. **Transformer Layers**: Standard encoder blocks
    - Multi-head self-attention
    - Feed-forward networks
    - Layer normalization
    - Residual connections
-
-5. **Output**: Global pooling → classification
-   - Shape: `(batch, num_classes)`
+5. **Output**: Global average pooling followed by classification head
 
 ### Configuration
 
@@ -88,7 +69,6 @@ os.environ['GT_AUTO_SHARD'] = '1'  # Enable multi-GPU
 import gt
 from model import PixelTransformer
 
-# Create model
 model = PixelTransformer(
     img_size=200,
     embed_dim=256,
@@ -96,7 +76,6 @@ model = PixelTransformer(
     num_layers=4
 )
 
-# Forward pass
 images = gt.randn(batch_size, seq_len, 200, 200)
 logits = model(images)  # (batch_size, num_classes)
 ```
@@ -108,19 +87,14 @@ import os
 os.environ['GT_AUTO_SHARD'] = '1'  # Auto multi-GPU
 os.environ['GT_VERBOSE'] = '1'     # Show GPU info
 
-# Run the training script
 # python train.py
 ```
 
-See `train.py` for a complete training example with:
-- Synthetic data generation
-- Training loop
-- Gradient descent updates
-- Accuracy tracking
+See `train.py` for training loop implementation including synthetic data generation, gradient descent updates, and accuracy tracking.
 
 ## Performance
 
-**Training Results (8 GPUs):**
+Training on synthetic data (8 GPUs):
 ```
 Epoch  1/5: Loss = 0.1003, Acc = 10.00%
 Epoch  2/5: Loss = 0.0992, Acc = 20.00%
@@ -129,41 +103,25 @@ Epoch  4/5: Loss = 0.0972, Acc = 30.00%
 Epoch  5/5: Loss = 0.0963, Acc = 40.00%
 ```
 
-- **Startup time**: ~1.8 seconds (server + 8 workers)
-- **Training time**: ~2 seconds for 5 epochs (20 samples)
-- **GPU utilization**: All 8 GPUs automatically used
-- **Model size**: 36 parameter tensors
-
-## Why Large Pixel Tokens?
-
-- **Novel approach**: Most vision transformers use small patches (16×16)
-- **Complete information**: Each token contains full spatial context
-- **Sequence modeling**: Learn relationships between full images
-- **Use cases**: Video understanding, image sequences, temporal modeling
+- Startup time: ~1.8 seconds (server + 8 workers)
+- Training time: ~2 seconds for 5 epochs (20 samples)
+- Model size: 36 parameter tensors
 
 ## Implementation Details
 
 ### Multi-Head Attention
 
-- Reshapes to `(batch, heads, seq, head_dim)`
-- Scaled dot-product attention
-- Properly handles 4D tensor transposes
+Reshapes input to `(batch, heads, seq, head_dim)` for parallel attention computation. Uses scaled dot-product attention with softmax.
 
 ### LayerNorm
 
-- Mean and variance computation along feature dimension
-- Learnable scale (gamma) and shift (beta) parameters
-- Numerically stable with eps=1e-5
+Computes mean and variance along feature dimension. Applies learnable scale and shift parameters. Numerical stability parameter eps=1e-5.
 
 ### Positional Encoding
 
-- Currently uses fixed (non-trainable) encodings
-- Created on-demand to avoid tensor slicing issues
-- Can be made learnable once tensor slicing on sharded tensors is supported
+Currently implemented as fixed encodings created on-demand during forward pass. This avoids tensor slicing issues with sharded tensors. Could be made learnable if slicing on sharded tensors is supported in the future.
 
 ## Testing
-
-Run all tests:
 
 ```bash
 # Test individual components
@@ -177,41 +135,14 @@ python tests/test_training_loop.py
 python train.py
 ```
 
-All tests pass! ✅ See `TEST_RESULTS.md` for details.
-
-## Development Status
-
-**Status**: ✅ **Production Ready**
-
-All core features are working:
-- ✅ Forward pass
-- ✅ Backward pass with gradients
-- ✅ Multi-GPU auto-sharding
-- ✅ Training loop
-- ✅ Parameter updates
-
-See `MISSING.md` for feature documentation and known issues.
-
-## Next Steps
-
-Now that everything works, you can:
-
-1. **Real data**: Replace synthetic data with actual image sequences
-2. **Scale up**: Increase model size, add more layers
-3. **Experiment**: Try different attention mechanisms, pooling strategies
-4. **Optimize**: Tune hyperparameters, add schedulers, regularization
-5. **Deploy**: Ready for distributed training at scale
+See `TEST_RESULTS.md` for detailed test results.
 
 ## Requirements
 
 - Python 3.8+
-- `gt` framework (from https://github.com/bwasti/gt)
+- `gt` framework (https://github.com/bwasti/gt)
 - NumPy
-
-## Citation
-
-Built using the GT distributed tensor framework.
 
 ## License
 
-MIT (or your preferred license)
+MIT
